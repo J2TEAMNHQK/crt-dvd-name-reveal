@@ -1,6 +1,7 @@
 /* ============================================
    CRT DVD NAME REVEAL — Animation Engine
    State machine + particle system + CRT FX
+   With customization panel & URL sharing
    ============================================ */
 
 ;(function () {
@@ -8,38 +9,56 @@
 
   // ── Configuration ──────────────────────────
   const CONFIG = {
-    freeMoveDuration: 15000,   // ms of free movement before assembly
-    assembleDuration: 2200,    // ms for words to fly to center
-    holdDuration: 5000,        // ms to hold assembled name
-    disperseDuration: 1400,    // ms for disperse animation
-    colorInterval: 1000,       // ms between color changes
-    baseSpeed: 1.2,            // base movement speed (px/frame at 60fps)
-    speedVariance: 0.6,        // random variance added to base
-    wordGap: 0.55,             // gap between words as fraction of font size
-    glitchChance: 0.003,       // per-frame probability of glitch event
-    flickerChance: 0.001,      // per-frame probability of screen flicker
-    interferenceChance: 0.0008 // per-frame probability of interference bar
+    freeMoveDuration: 15000,
+    assembleDuration: 2200,
+    holdDuration: 5000,
+    disperseDuration: 1400,
+    colorInterval: 1000,
+    baseSpeed: 1.2,
+    speedVariance: 0.6,
+    wordGap: 0.55,
+    glitchChance: 0.003,
+    flickerChance: 0.001,
+    interferenceChance: 0.0008
   };
 
-  // Curated vivid color palette — avoids muddy tones
+  // Curated vivid color palette
   const PALETTE = [
-    '#FF3366', // hot pink
-    '#FF6B2B', // vivid orange
-    '#FFD23F', // golden yellow
-    '#44FF88', // mint green
-    '#00FFCC', // cyan-green
-    '#33CCFF', // sky blue
-    '#6B5BFF', // electric indigo
-    '#CC44FF', // violet
-    '#FF4488', // rose
-    '#FFAA22', // amber
-    '#22FFAA', // spring green
-    '#44AAFF', // cornflower
-    '#FF5577', // coral
-    '#BBFF44', // lime
-    '#FF77CC', // bubblegum
-    '#77DDFF'  // light cyan
+    '#FF3366', '#FF6B2B', '#FFD23F', '#44FF88',
+    '#00FFCC', '#33CCFF', '#6B5BFF', '#CC44FF',
+    '#FF4488', '#FFAA22', '#22FFAA', '#44AAFF',
+    '#FF5577', '#BBFF44', '#FF77CC', '#77DDFF'
   ];
+
+  // Default words
+  const DEFAULT_WORDS = [
+    { text: 'NGUYỄN', color: null },
+    { text: 'HỒ',     color: null },
+    { text: 'QUANG',  color: null },
+    { text: 'KHẢI',   color: null }
+  ];
+
+  // Preset configurations
+  const PRESETS = {
+    'nguyen-ho-quang-khai': [
+      { text: 'NGUYỄN', color: null },
+      { text: 'HỒ',     color: null },
+      { text: 'QUANG',  color: null },
+      { text: 'KHẢI',   color: null }
+    ],
+    'john-doe': [
+      { text: 'JOHN', color: null },
+      { text: 'DOE',  color: null }
+    ],
+    'tanaka': [
+      { text: '田中', color: null },
+      { text: '太郎', color: null }
+    ],
+    'kim': [
+      { text: '김', color: null },
+      { text: '민수', color: null }
+    ]
+  };
 
   // ── State Machine ──────────────────────────
   const State = Object.freeze({
@@ -60,71 +79,143 @@
   const grainCtx = grainCanvas.getContext('2d');
   const statusLabel = document.querySelector('.status-label');
   const statusText = document.querySelector('.status-text');
-  const particleEls = Array.from(document.querySelectorAll('.particle'));
+  const settingsToggle = document.getElementById('settingsToggle');
+  const settingsPanel = document.getElementById('settingsPanel');
+  const settingsClose = document.getElementById('settingsClose');
+  const wordInputsContainer = document.getElementById('wordInputs');
+  const addWordBtn = document.getElementById('addWord');
+  const applyBtn = document.getElementById('applySettings');
+  const shareLinkBtn = document.getElementById('shareLink');
+  const shareToast = document.getElementById('shareToast');
 
   // ── Viewport ───────────────────────────────
   let vw = window.innerWidth;
   let vh = window.innerHeight;
 
   // ── Particle Data ──────────────────────────
-  const words = ['NGUYỄN', 'HỒ', 'QUANG', 'KHẢI'];
-
-  const particles = particleEls.map((el, i) => {
-    const rect = el.getBoundingClientRect();
-    const angle = Math.random() * Math.PI * 2;
-    const speed = CONFIG.baseSpeed + Math.random() * CONFIG.speedVariance;
-    return {
-      el,
-      word: words[i],
-      index: i,
-      x: Math.random() * (vw - rect.width),
-      y: Math.random() * (vh - rect.height),
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
-      width: rect.width,
-      height: rect.height,
-      color: PALETTE[i % PALETTE.length],
-      targetX: 0,
-      targetY: 0,
-      originX: 0,
-      originY: 0,
-      // idle floating offset
-      floatPhase: Math.random() * Math.PI * 2,
-      floatAmpX: 0.3 + Math.random() * 0.5,
-      floatAmpY: 0.2 + Math.random() * 0.4
-    };
-  });
+  let particles = [];
+  let wordConfigs = []; // { text, color (null = auto) }
 
   // ── Utility Functions ──────────────────────
 
-  /** Pick N distinct colors from palette */
   function pickDistinctColors(count) {
     const shuffled = [...PALETTE].sort(() => Math.random() - 0.5);
     return shuffled.slice(0, count);
   }
 
-  /** Smooth ease-out cubic */
   function easeOutCubic(t) {
     return 1 - Math.pow(1 - t, 3);
   }
 
-  /** Smooth ease-in-out cubic */
   function easeInOutCubic(t) {
-    return t < 0.5
-      ? 4 * t * t * t
-      : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
   }
 
-  /** Elastic ease out for dramatic convergence */
   function easeOutBack(t) {
     const c1 = 1.70158;
     const c3 = c1 + 1;
     return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
   }
 
-  /** Lerp */
   function lerp(a, b, t) {
     return a + (b - a) * t;
+  }
+
+  // ── Parse URL Parameters ───────────────────
+  function parseURLConfig() {
+    const params = new URLSearchParams(window.location.search);
+    const wordsParam = params.get('words');
+    const colorsParam = params.get('colors');
+
+    if (wordsParam) {
+      const texts = wordsParam.split(',').map(w => decodeURIComponent(w.trim())).filter(Boolean);
+      const colors = colorsParam
+        ? colorsParam.split(',').map(c => {
+            const decoded = decodeURIComponent(c.trim());
+            return decoded && decoded !== 'auto' ? decoded : null;
+          })
+        : [];
+
+      if (texts.length > 0) {
+        return texts.map((text, i) => ({
+          text,
+          color: colors[i] || null
+        }));
+      }
+    }
+    return null;
+  }
+
+  function buildShareURL() {
+    const base = window.location.origin + window.location.pathname;
+    const texts = wordConfigs.map(w => encodeURIComponent(w.text)).join(',');
+    const colors = wordConfigs.map(w => w.color ? encodeURIComponent(w.color) : 'auto').join(',');
+    return `${base}?words=${texts}&colors=${colors}`;
+  }
+
+  // ── Create Particles from Config ───────────
+  function createParticles(configs) {
+    // Cancel animation
+    if (animFrameId) {
+      cancelAnimationFrame(animFrameId);
+      animFrameId = null;
+    }
+
+    wordConfigs = configs;
+
+    // Clear existing
+    stage.innerHTML = '';
+    particles = [];
+
+    // Create DOM elements and particle data
+    configs.forEach((cfg, i) => {
+      const el = document.createElement('span');
+      el.className = 'particle';
+      el.dataset.index = i;
+      el.textContent = cfg.text;
+      stage.appendChild(el);
+
+      const angle = Math.random() * Math.PI * 2;
+      const speed = CONFIG.baseSpeed + Math.random() * CONFIG.speedVariance;
+
+      particles.push({
+        el,
+        word: cfg.text,
+        index: i,
+        fixedColor: cfg.color,
+        x: 0,
+        y: 0,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        width: 0,
+        height: 0,
+        color: cfg.color || PALETTE[i % PALETTE.length],
+        targetX: 0,
+        targetY: 0,
+        originX: 0,
+        originY: 0,
+        floatPhase: Math.random() * Math.PI * 2,
+        floatAmpX: 0.3 + Math.random() * 0.5,
+        floatAmpY: 0.2 + Math.random() * 0.4
+      });
+    });
+
+    // Wait a frame for DOM measurement
+    requestAnimationFrame(() => {
+      measureParticles();
+      particles.forEach(p => {
+        p.x = Math.random() * Math.max(0, vw - p.width);
+        p.y = Math.random() * Math.max(0, vh - p.height);
+        p.el.style.color = p.color;
+      });
+
+      currentState = State.FREE;
+      stateStartTime = performance.now();
+      lastColorChange = stateStartTime;
+      updateStatusLabel(State.FREE);
+      setTimeout(() => statusLabel.classList.add('visible'), 300);
+      animFrameId = requestAnimationFrame(tick);
+    });
   }
 
   // ── Measure Particles ──────────────────────
@@ -139,12 +230,13 @@
   // ── Compute Centered Assembly Positions ────
   function computeAssemblyTargets() {
     measureParticles();
+    if (particles.length === 0) return;
+
     const gap = particles[0].height * CONFIG.wordGap;
     const totalWidth = particles.reduce((sum, p) => sum + p.width, 0) +
                        gap * (particles.length - 1);
     const lineHeight = Math.max(...particles.map(p => p.height));
 
-    // If assembled text is wider than viewport, scale down gap
     const availableWidth = vw * 0.92;
     const effectiveGap = totalWidth > availableWidth
       ? Math.max(8, (availableWidth - particles.reduce((s, p) => s + p.width, 0)) / (particles.length - 1))
@@ -164,10 +256,17 @@
 
   // ── Color Management ───────────────────────
   function rotateColors() {
-    const newColors = pickDistinctColors(particles.length);
-    particles.forEach((p, i) => {
-      p.color = newColors[i];
-      p.el.style.color = newColors[i];
+    const autoCount = particles.filter(p => !p.fixedColor).length;
+    const newColors = pickDistinctColors(autoCount);
+    let colorIdx = 0;
+
+    particles.forEach(p => {
+      if (p.fixedColor) {
+        p.color = p.fixedColor;
+      } else {
+        p.color = newColors[colorIdx++] || PALETTE[p.index % PALETTE.length];
+      }
+      p.el.style.color = p.color;
     });
   }
 
@@ -176,59 +275,40 @@
     const floatTime = now * 0.001;
 
     particles.forEach(p => {
-      // Add subtle sinusoidal float to the base velocity
       const floatX = Math.sin(floatTime * 0.7 + p.floatPhase) * p.floatAmpX;
       const floatY = Math.cos(floatTime * 0.5 + p.floatPhase) * p.floatAmpY;
 
       p.x += p.vx + floatX;
       p.y += p.vy + floatY;
 
-      // Bounce off edges
-      if (p.x <= 0) {
-        p.x = 0;
-        p.vx = Math.abs(p.vx);
-      } else if (p.x + p.width >= vw) {
-        p.x = vw - p.width;
-        p.vx = -Math.abs(p.vx);
-      }
+      if (p.x <= 0) { p.x = 0; p.vx = Math.abs(p.vx); }
+      else if (p.x + p.width >= vw) { p.x = vw - p.width; p.vx = -Math.abs(p.vx); }
 
-      if (p.y <= 0) {
-        p.y = 0;
-        p.vy = Math.abs(p.vy);
-      } else if (p.y + p.height >= vh) {
-        p.y = vh - p.height;
-        p.vy = -Math.abs(p.vy);
-      }
+      if (p.y <= 0) { p.y = 0; p.vy = Math.abs(p.vy); }
+      else if (p.y + p.height >= vh) { p.y = vh - p.height; p.vy = -Math.abs(p.vy); }
     });
   }
 
-  // ── Assembly Animation ─────────────────────
   function updateAssembly(elapsed) {
     const t = Math.min(elapsed / CONFIG.assembleDuration, 1);
     const eased = easeOutBack(t);
-
     particles.forEach(p => {
       p.x = lerp(p.originX, p.targetX, eased);
       p.y = lerp(p.originY, p.targetY, eased);
     });
-
     return t >= 1;
   }
 
-  // ── Disperse Animation ─────────────────────
   function updateDisperse(elapsed) {
     const t = Math.min(elapsed / CONFIG.disperseDuration, 1);
     const eased = easeInOutCubic(t);
-
     particles.forEach(p => {
       p.x = lerp(p.originX, p.targetX, eased);
       p.y = lerp(p.originY, p.targetY, eased);
     });
-
     return t >= 1;
   }
 
-  // ── Render Particles ───────────────────────
   function renderParticles() {
     particles.forEach(p => {
       p.el.style.transform = `translate(${p.x}px, ${p.y}px)`;
@@ -257,24 +337,14 @@
 
   // ── Status Label ───────────────────────────
   function updateStatusLabel(state) {
-    switch (state) {
-      case State.FREE:
-        statusText.textContent = 'SIGNAL LOST';
-        statusLabel.classList.add('visible');
-        break;
-      case State.ASSEMBLING:
-        statusText.textContent = 'TRACKING…';
-        statusLabel.classList.add('visible');
-        break;
-      case State.HOLDING:
-        statusText.textContent = 'LOCK';
-        statusLabel.classList.add('visible');
-        break;
-      case State.DISPERSING:
-        statusText.textContent = 'SIGNAL LOST';
-        statusLabel.classList.add('visible');
-        break;
-    }
+    const labels = {
+      [State.FREE]: 'SIGNAL LOST',
+      [State.ASSEMBLING]: 'TRACKING…',
+      [State.HOLDING]: 'LOCK',
+      [State.DISPERSING]: 'SIGNAL LOST'
+    };
+    statusText.textContent = labels[state] || '';
+    statusLabel.classList.add('visible');
   }
 
   // ── Grain Background ──────────────────────
@@ -301,10 +371,7 @@
   let grainFrame = 0;
   function updateGrain() {
     grainFrame++;
-    // Update grain every 3 frames for performance
-    if (grainFrame % 3 === 0) {
-      renderGrain();
-    }
+    if (grainFrame % 3 === 0) renderGrain();
   }
 
   // ── State Transitions ──────────────────────
@@ -329,20 +396,18 @@
       case State.HOLDING:
         particles.forEach(p => {
           p.el.classList.add('assembled');
-          // Snap to exact target
           p.x = p.targetX;
           p.y = p.targetY;
         });
         break;
 
       case State.DISPERSING: {
-        // Scatter to different quadrants for visual spread
         const pad = 20;
         const quadrants = [
-          { xMin: pad,          xMax: vw * 0.35, yMin: pad,          yMax: vh * 0.35 },
-          { xMin: vw * 0.6,     xMax: vw - pad,  yMin: pad,          yMax: vh * 0.35 },
-          { xMin: pad,          xMax: vw * 0.35, yMin: vh * 0.6,     yMax: vh - pad },
-          { xMin: vw * 0.6,     xMax: vw - pad,  yMin: vh * 0.6,     yMax: vh - pad }
+          { xMin: pad,      xMax: vw * 0.35, yMin: pad,      yMax: vh * 0.35 },
+          { xMin: vw * 0.6, xMax: vw - pad,  yMin: pad,      yMax: vh * 0.35 },
+          { xMin: pad,      xMax: vw * 0.35, yMin: vh * 0.6,  yMax: vh - pad },
+          { xMin: vw * 0.6, xMax: vw - pad,  yMin: vh * 0.6,  yMax: vh - pad }
         ];
         const shuffledQ = [...quadrants].sort(() => Math.random() - 0.5);
         particles.forEach((p, i) => {
@@ -352,10 +417,8 @@
           const q = shuffledQ[i % shuffledQ.length];
           p.targetX = q.xMin + Math.random() * Math.max(0, q.xMax - q.xMin - p.width);
           p.targetY = q.yMin + Math.random() * Math.max(0, q.yMax - q.yMin - p.height);
-          // Clamp within viewport
           p.targetX = Math.max(0, Math.min(vw - p.width, p.targetX));
           p.targetY = Math.max(0, Math.min(vh - p.height, p.targetY));
-          // Set new velocity for next free state
           const newAngle = Math.random() * Math.PI * 2;
           const speed = CONFIG.baseSpeed + Math.random() * CONFIG.speedVariance;
           p.vx = Math.cos(newAngle) * speed;
@@ -370,115 +433,234 @@
   function tick(now) {
     const elapsed = now - stateStartTime;
 
-    // Color rotation
     if (now - lastColorChange >= CONFIG.colorInterval) {
       rotateColors();
       lastColorChange = now;
     }
 
-    // State logic
     switch (currentState) {
       case State.FREE:
         updateFreeMovement(now);
-        if (elapsed >= CONFIG.freeMoveDuration) {
-          enterState(State.ASSEMBLING, now);
-        }
+        if (elapsed >= CONFIG.freeMoveDuration) enterState(State.ASSEMBLING, now);
         break;
-
       case State.ASSEMBLING:
-        if (updateAssembly(elapsed)) {
-          enterState(State.HOLDING, now);
-        }
+        if (updateAssembly(elapsed)) enterState(State.HOLDING, now);
         break;
-
       case State.HOLDING:
-        // Subtle idle float while holding
         particles.forEach(p => {
           const drift = Math.sin(now * 0.002 + p.index) * 1.5;
           p.x = p.targetX + drift;
         });
-        if (elapsed >= CONFIG.holdDuration) {
-          enterState(State.DISPERSING, now);
-        }
+        if (elapsed >= CONFIG.holdDuration) enterState(State.DISPERSING, now);
         break;
-
       case State.DISPERSING:
-        if (updateDisperse(elapsed)) {
-          enterState(State.FREE, now);
-        }
+        if (updateDisperse(elapsed)) enterState(State.FREE, now);
         break;
     }
 
     renderParticles();
 
-    // Random FX events (only during free movement and dispersing)
     if (currentState === State.FREE || currentState === State.DISPERSING) {
-      if (Math.random() < CONFIG.glitchChance) {
-        const idx = Math.floor(Math.random() * particles.length);
-        triggerGlitch(particles[idx]);
+      if (Math.random() < CONFIG.glitchChance && particles.length > 0) {
+        triggerGlitch(particles[Math.floor(Math.random() * particles.length)]);
       }
-      if (Math.random() < CONFIG.flickerChance) {
-        triggerScreenFlicker();
-      }
-      if (Math.random() < CONFIG.interferenceChance) {
-        spawnInterferenceBar();
-      }
+      if (Math.random() < CONFIG.flickerChance) triggerScreenFlicker();
+      if (Math.random() < CONFIG.interferenceChance) spawnInterferenceBar();
     }
 
     updateGrain();
-
     animFrameId = requestAnimationFrame(tick);
   }
 
   // ── Resize Handler ─────────────────────────
-  function onResize() {
-    vw = window.innerWidth;
-    vh = window.innerHeight;
-    resizeGrain();
-    measureParticles();
-
-    // Clamp particles within new viewport
-    particles.forEach(p => {
-      p.x = Math.max(0, Math.min(vw - p.width, p.x));
-      p.y = Math.max(0, Math.min(vh - p.height, p.y));
-    });
-
-    // Recompute assembly targets if currently assembling or holding
-    if (currentState === State.ASSEMBLING || currentState === State.HOLDING) {
-      computeAssemblyTargets();
-    }
-  }
-
   let resizeTimer;
   window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(onResize, 100);
+    resizeTimer = setTimeout(() => {
+      vw = window.innerWidth;
+      vh = window.innerHeight;
+      resizeGrain();
+      measureParticles();
+      particles.forEach(p => {
+        p.x = Math.max(0, Math.min(vw - p.width, p.x));
+        p.y = Math.max(0, Math.min(vh - p.height, p.y));
+      });
+      if (currentState === State.ASSEMBLING || currentState === State.HOLDING) {
+        computeAssemblyTargets();
+      }
+    }, 100);
+  });
+
+  // ============================================
+  // SETTINGS PANEL
+  // ============================================
+
+  let settingsOpen = false;
+  let settingsJustToggled = false;
+
+  function openSettings() {
+    settingsOpen = true;
+    settingsPanel.classList.add('open');
+    populateWordInputs();
+  }
+
+  function closeSettings() {
+    settingsOpen = false;
+    settingsPanel.classList.remove('open');
+  }
+
+  settingsToggle.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    settingsJustToggled = true;
+    if (settingsOpen) {
+      closeSettings();
+    } else {
+      openSettings();
+    }
+    // Reset flag after current event cycle
+    setTimeout(() => { settingsJustToggled = false; }, 0);
+  });
+
+  settingsClose.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    closeSettings();
+  });
+
+  // Prevent clicks inside panel from closing it
+  settingsPanel.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+
+  // Close on click outside
+  document.addEventListener('click', () => {
+    if (settingsOpen && !settingsJustToggled) {
+      closeSettings();
+    }
+  });
+
+  // Close on Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && settingsOpen) {
+      closeSettings();
+    }
+  });
+
+  function populateWordInputs() {
+    wordInputsContainer.innerHTML = '';
+    wordConfigs.forEach((cfg, i) => {
+      addWordRow(cfg.text, cfg.color);
+    });
+  }
+
+  function addWordRow(text, color) {
+    const row = document.createElement('div');
+    row.className = 'word-row';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = 'Enter word…';
+    input.value = text || '';
+
+    const colorInput = document.createElement('input');
+    colorInput.type = 'color';
+    colorInput.value = color || '#ffffff';
+    colorInput.title = 'Pick color (white = auto-cycle)';
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'btn-remove';
+    removeBtn.textContent = '×';
+    removeBtn.title = 'Remove';
+    removeBtn.addEventListener('click', () => {
+      row.remove();
+    });
+
+    row.appendChild(input);
+    row.appendChild(colorInput);
+    row.appendChild(removeBtn);
+    wordInputsContainer.appendChild(row);
+  }
+
+  addWordBtn.addEventListener('click', () => {
+    addWordRow('', null);
+    // Focus the new input
+    const inputs = wordInputsContainer.querySelectorAll('input[type="text"]');
+    if (inputs.length > 0) inputs[inputs.length - 1].focus();
+  });
+
+  applyBtn.addEventListener('click', () => {
+    const rows = wordInputsContainer.querySelectorAll('.word-row');
+    const newConfigs = [];
+
+    rows.forEach(row => {
+      const text = row.querySelector('input[type="text"]').value.trim();
+      const colorVal = row.querySelector('input[type="color"]').value;
+      if (text) {
+        // If color is white (#ffffff), treat as auto
+        const isAuto = colorVal.toLowerCase() === '#ffffff';
+        newConfigs.push({
+          text,
+          color: isAuto ? null : colorVal
+        });
+      }
+    });
+
+    if (newConfigs.length === 0) return;
+
+    // Update URL without reload
+    const url = new URL(window.location);
+    url.searchParams.set('words', newConfigs.map(c => c.text).join(','));
+    url.searchParams.set('colors', newConfigs.map(c => c.color || 'auto').join(','));
+    window.history.replaceState({}, '', url);
+
+    createParticles(newConfigs);
+    closeSettings();
+  });
+
+  // Presets
+  document.querySelectorAll('.btn-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.preset;
+      if (PRESETS[key]) {
+        const configs = PRESETS[key];
+        wordInputsContainer.innerHTML = '';
+        configs.forEach(c => addWordRow(c.text, c.color));
+      }
+    });
+  });
+
+  // Share link
+  shareLinkBtn.addEventListener('click', () => {
+    const url = buildShareURL();
+    navigator.clipboard.writeText(url).then(() => {
+      shareToast.classList.add('show');
+      setTimeout(() => shareToast.classList.remove('show'), 2000);
+    }).catch(() => {
+      // Fallback: select text
+      const ta = document.createElement('textarea');
+      ta.value = url;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+      shareToast.classList.add('show');
+      setTimeout(() => shareToast.classList.remove('show'), 2000);
+    });
   });
 
   // ── Initialize ─────────────────────────────
   function init() {
     resizeGrain();
     renderGrain();
-    measureParticles();
 
-    // Set initial positions
-    particles.forEach(p => {
-      p.x = Math.random() * Math.max(0, vw - p.width);
-      p.y = Math.random() * Math.max(0, vh - p.height);
-    });
+    // Check URL for custom config
+    const urlConfig = parseURLConfig();
+    const initialConfigs = urlConfig || DEFAULT_WORDS;
 
-    rotateColors();
-    stateStartTime = performance.now();
-    lastColorChange = stateStartTime;
-    updateStatusLabel(State.FREE);
-
-    // Slightly delay the status label appearance
-    setTimeout(() => statusLabel.classList.add('visible'), 500);
-
-    animFrameId = requestAnimationFrame(tick);
+    createParticles(initialConfigs);
   }
 
-  // Ensure fonts are loaded before measuring
   if (document.fonts && document.fonts.ready) {
     document.fonts.ready.then(init);
   } else {

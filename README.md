@@ -4,6 +4,8 @@
 
 > _Imagine a lost TV signal. Static hisses. Glowing text fragments drift across a dark screen like a haunted DVD logo. Then, every 15 seconds, the signal locks — and a name materializes from the noise._
 
+🔗 **[Live Demo](https://j2teamnhqk.github.io/crt-dvd-name-reveal/)**
+
 ---
 
 ## ✨ The Vibe
@@ -21,7 +23,7 @@ The result is a cinematic, smooth, modernized take on retro display technology �
 
 ## 🎬 What It Does
 
-Four Vietnamese name fragments — **NGUYỄN**, **HỒ**, **QUANG**, **KHẢI** — float independently across a dark screen with DVD-style bouncing motion and subtle signal drift.
+Name fragments float independently across a dark screen with DVD-style bouncing motion and subtle signal drift. By default it displays **NGUYỄN HỒ QUANG KHẢI**, but **anyone can customize it with their own name in any language**.
 
 ### The Animation Cycle
 
@@ -31,10 +33,10 @@ Four Vietnamese name fragments — **NGUYỄN**, **HỒ**, **QUANG**, **KHẢI**
 │  Words bounce independently with vivid shifting colors      │
 │  ↓                                                          │
 │  ASSEMBLY (2.2s)                                            │
-│  All four words fly to center with easeOutBack easing       │
+│  All words fly to center with elastic easeOutBack easing    │
 │  ↓                                                          │
 │  HOLD (5s)                                                  │
-│  "NGUYỄN HỒ QUANG KHẢI" holds centered with enhanced glow  │
+│  Full name holds centered with enhanced glow                │
 │  ↓                                                          │
 │  DISPERSE (1.4s)                                            │
 │  Words scatter to different quadrants organically            │
@@ -47,22 +49,38 @@ Four Vietnamese name fragments — **NGUYỄN**, **HỒ**, **QUANG**, **KHẢI**
 
 ## 🎯 Features
 
+### Core Animation
+
 - **DVD-style bouncing motion** with edge collision and sinusoidal float variation
 - **Vivid color cycling** — each word changes to a curated palette color every second, no two words share the same color
-- **CRT visual effects stack:**
-  - Animated scanlines
-  - Real-time canvas grain noise
-  - Radial vignette
-  - Screen flicker events
-  - Horizontal interference bars
-  - RGB chromatic aberration on glitch pulses
 - **Dramatic convergence animation** with elastic easeOutBack easing
 - **Centered title hold** with enhanced bloom glow and subtle idle drift
 - **Quadrant-based organic disperse** so words scatter convincingly
-- **Status indicator** cycling through "SIGNAL LOST" → "TRACKING…" → "LOCK"
-- **Vietnamese diacritics** rendered perfectly (Ễ, Ồ, Ả)
-- **Responsive** — adapts to any viewport size
 - **Smooth 60fps** using `transform`-based positioning and `requestAnimationFrame`
+
+### CRT Visual Effects
+
+- Animated scanlines
+- Real-time canvas grain noise
+- Radial vignette
+- Screen flicker events
+- Horizontal interference bars
+- RGB chromatic aberration on glitch pulses
+- Status indicator cycling: "SIGNAL LOST" → "TRACKING…" → "LOCK"
+
+### 🎨 Customization (NEW)
+
+- **Custom name input** — enter any name parts as separate floating words
+- **Per-word color picker** — choose a fixed color for each word, or leave white for auto-cycling
+- **All languages supported** — Vietnamese, Japanese, Korean, Chinese, Arabic, Cyrillic, and more
+- **Presets** — quick-load example names in different languages
+- **Shareable URLs** — copy a link that encodes your custom name and colors
+- **Add/remove words** — use as many name parts as you want
+
+### Responsive
+
+- Adapts to any viewport size
+- Vietnamese diacritics rendered perfectly (Ễ, Ồ, Ả)
 
 ---
 
@@ -74,7 +92,7 @@ Four Vietnamese name fragments — **NGUYỄN**, **HỒ**, **QUANG**, **KHẢI**
 | Styling   | Pure CSS3 (animations, gradients, blend modes)  |
 | Animation | Vanilla JavaScript (requestAnimationFrame loop) |
 | Grain     | Canvas 2D API                                   |
-| Fonts     | System font stack with Vietnamese support       |
+| Fonts     | System font stack with international support    |
 
 **Zero dependencies. Zero frameworks. Zero build tools.**
 
@@ -84,9 +102,9 @@ Four Vietnamese name fragments — **NGUYỄN**, **HỒ**, **QUANG**, **KHẢI**
 
 ```
 crt-dvd-name-reveal/
-├── index.html      → Semantic markup + CRT overlay layers
-├── style.css       → All visual effects, animations, responsive rules
-├── script.js       → Animation engine, state machine, particle system
+├── index.html      → Semantic markup, CRT overlays, settings panel
+├── style.css       → CRT effects, settings UI, responsive rules
+├── script.js       → Animation engine, state machine, customization
 └── README.md       → This file
 ```
 
@@ -98,12 +116,8 @@ crt-dvd-name-reveal/
 2. Open `index.html` in any modern browser
 
 ```bash
-# Clone
 git clone https://github.com/J2TEAMNHQK/crt-dvd-name-reveal.git
-
-# Open
 cd crt-dvd-name-reveal
-# Double-click index.html, or:
 start index.html        # Windows
 open index.html         # macOS
 xdg-open index.html     # Linux
@@ -111,45 +125,57 @@ xdg-open index.html     # Linux
 
 No server required. No build step. Just open and watch.
 
+### URL Parameters
+
+You can share a custom name via URL:
+
+```
+?words=JOHN,DOE&colors=auto,%23FF3366
+```
+
+- `words` — comma-separated name parts
+- `colors` — comma-separated hex colors or `auto` for cycling
+
 ---
 
 ## 🎨 Customization
 
-### Change the name
+### Via the Settings Panel
 
-Edit the words in both `index.html` (the `<span>` elements) and `script.js` (the `words` array):
+Click the ⚙ gear icon in the top-right corner to:
+
+- Type your own name parts
+- Pick colors per word
+- Load language presets
+- Copy a shareable link
+
+### Via Code
+
+**Change default words** in `script.js`:
 
 ```javascript
-// script.js
-const words = ["NGUYỄN", "HỒ", "QUANG", "KHẢI"];
+const DEFAULT_WORDS = [
+  { text: "NGUYỄN", color: null },
+  { text: "HỒ", color: null },
+  { text: "QUANG", color: null },
+  { text: "KHẢI", color: null },
+];
 ```
 
-```html
-<!-- index.html -->
-<span class="particle" data-index="0">NGUYỄN</span>
-<span class="particle" data-index="1">HỒ</span>
-<span class="particle" data-index="2">QUANG</span>
-<span class="particle" data-index="3">KHẢI</span>
-```
-
-### Adjust timing
-
-All timing is controlled via the `CONFIG` object in `script.js`:
+**Adjust timing** via `CONFIG`:
 
 ```javascript
 const CONFIG = {
   freeMoveDuration: 15000, // ms of free bouncing
-  assembleDuration: 2200, // ms for convergence animation
-  holdDuration: 5000, // ms to hold assembled name
-  disperseDuration: 1400, // ms for scatter animation
+  assembleDuration: 2200, // ms for convergence
+  holdDuration: 5000, // ms to hold assembled
+  disperseDuration: 1400, // ms for scatter
   colorInterval: 1000, // ms between color changes
   baseSpeed: 1.2, // movement speed
 };
 ```
 
-### Modify the color palette
-
-Edit the `PALETTE` array for different color schemes:
+**Modify the color palette:**
 
 ```javascript
 const PALETTE = [
@@ -161,32 +187,25 @@ const PALETTE = [
   "#33CCFF",
   "#6B5BFF",
   "#CC44FF",
-  // ... add or replace colors
 ];
 ```
-
-### Adjust CRT intensity
-
-Tweak CSS opacity values for scanlines, noise, and vignette in `style.css`.
 
 ---
 
 ## 💡 Future Improvement Ideas
 
-- [ ] Add audio — subtle CRT hum, static noise, satisfying lock sound on assembly
-- [ ] Corner-hit detection with special color burst (classic DVD Easter egg)
-- [ ] WebGL shader-based CRT distortion for barrel/pincushion effect
+- [ ] Audio — subtle CRT hum, static noise, satisfying lock sound
+- [ ] Corner-hit detection with color burst (classic DVD Easter egg)
+- [ ] WebGL shader-based CRT barrel distortion
 - [ ] Mobile touch interaction — tap to trigger early assembly
-- [ ] Multiple name presets with URL parameter support
-- [ ] Dark/light mode toggle (light mode = blown-out CRT white)
-- [ ] Export as animated GIF/WebM for social sharing
-- [ ] P5.js or Three.js version for more advanced visual effects
+- [ ] Export as animated GIF/WebM
+- [ ] P5.js or Three.js version for advanced effects
 
 ---
 
 ## 👤 Author
 
-**Nguyễn Hồ Quang Khải**
+**Nguyễn Hồ Quang Khải** — [@J2TEAMNHQK](https://github.com/J2TEAMNHQK)
 
 ---
 

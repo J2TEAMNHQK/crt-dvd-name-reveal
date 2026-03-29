@@ -1,6 +1,6 @@
 /* ============================================
    CRT DVD NAME REVEAL — Stylesheet
-   Retro analog signal aesthetic
+   Retro analog signal aesthetic + settings UI
    ============================================ */
 
 /* --- Reset & Base --- */
@@ -15,7 +15,7 @@ html, body {
   height: 100%;
   overflow: hidden;
   background: #0a0a0a;
-  font-family: 'Segoe UI', 'Arial', 'Helvetica Neue', sans-serif;
+  font-family: 'Segoe UI', 'Arial', 'Helvetica Neue', 'Noto Sans', 'Noto Sans JP', 'Noto Sans KR', 'Noto Sans SC', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -39,7 +39,6 @@ html, body {
   white-space: nowrap;
   will-change: transform;
   transition: text-shadow 0.3s ease;
-  /* Default glow — overridden per-color by JS */
   text-shadow:
     0 0 8px currentColor,
     0 0 20px currentColor,
@@ -224,11 +223,276 @@ body.flicker {
   100% { top: 100vh; opacity: 0; }
 }
 
-/* --- Assembled title spacing --- */
-.particle.word-nguyen { /* leftmost */ }
-.particle.word-ho { }
-.particle.word-quang { }
-.particle.word-khai { /* rightmost */ }
+/* ============================================
+   SETTINGS PANEL
+   ============================================ */
+
+/* --- Settings Toggle Button --- */
+.settings-toggle {
+  position: fixed;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 100;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 50%;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(8px);
+}
+
+.settings-toggle:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.7);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* --- Settings Panel --- */
+.settings-panel {
+  position: fixed;
+  top: 0;
+  right: -380px;
+  z-index: 200;
+  width: 360px;
+  max-width: 90vw;
+  height: 100vh;
+  background: rgba(10, 10, 10, 0.95);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-panel.open {
+  right: 0;
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.settings-header h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.settings-close {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0 0.3rem;
+  transition: color 0.2s;
+}
+
+.settings-close:hover {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.settings-body {
+  padding: 1.5rem;
+  flex: 1;
+}
+
+.settings-hint {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.35);
+  margin-bottom: 1.2rem;
+  line-height: 1.5;
+}
+
+/* --- Word Inputs --- */
+.word-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.word-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.word-row input[type="text"] {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 0.6rem 0.8rem;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.word-row input[type="text"]::placeholder {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.word-row input[type="text"]:focus {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.word-row input[type="color"] {
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  padding: 2px;
+}
+
+.word-row input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.word-row input[type="color"]::-webkit-color-swatch {
+  border-radius: 3px;
+  border: none;
+}
+
+.word-row .btn-remove {
+  background: none;
+  border: none;
+  color: rgba(255, 80, 80, 0.5);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0 0.3rem;
+  transition: color 0.2s;
+  line-height: 1;
+}
+
+.word-row .btn-remove:hover {
+  color: rgba(255, 80, 80, 0.9);
+}
+
+/* --- Buttons --- */
+.settings-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.btn {
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-add {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.5);
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+}
+
+.btn-add:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.btn-apply {
+  flex: 1;
+  background: rgba(100, 200, 255, 0.15);
+  color: rgba(100, 200, 255, 0.9);
+  border: 1px solid rgba(100, 200, 255, 0.25);
+}
+
+.btn-apply:hover {
+  background: rgba(100, 200, 255, 0.25);
+}
+
+/* --- Presets --- */
+.settings-presets {
+  margin-bottom: 1.5rem;
+}
+
+.preset-label {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.3);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 0.6rem;
+}
+
+.btn-preset {
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.72rem;
+  margin-right: 0.4rem;
+  margin-bottom: 0.4rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-preset:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* --- Share --- */
+.settings-share {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-share {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-share:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.share-toast {
+  font-size: 0.75rem;
+  color: rgba(100, 255, 150, 0.8);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.share-toast.show {
+  opacity: 1;
+}
 
 /* --- Responsive tweaks --- */
 @media (max-width: 600px) {
@@ -239,23 +503,16 @@ body.flicker {
     bottom: 1rem;
     left: 1rem;
   }
+  .settings-toggle {
+    top: 1rem;
+    right: 1rem;
+    width: 36px;
+    height: 36px;
+  }
 }
 
 @media (max-width: 400px) {
   .particle {
     font-size: clamp(1.1rem, 8vw, 2rem);
   }
-}
-
-/* --- Tracking status variant --- */
-.status-label[data-state="tracking"] .status-text::after {
-  content: '';
-  animation: ellipsis 1.5s steps(3) infinite;
-}
-
-@keyframes ellipsis {
-  0% { content: ''; }
-  33% { content: '.'; }
-  66% { content: '..'; }
-  100% { content: '...'; }
 }
