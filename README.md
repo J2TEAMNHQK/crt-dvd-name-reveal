@@ -99,7 +99,7 @@ crt-dvd-name-reveal/
 
 ```bash
 # Clone
-git clone https://github.com/YOUR_USERNAME/crt-dvd-name-reveal.git
+git clone https://github.com/J2TEAMNHQK/crt-dvd-name-reveal.git
 
 # Open
 cd crt-dvd-name-reveal
