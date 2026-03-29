@@ -1,0 +1,261 @@
+/* ============================================
+   CRT DVD NAME REVEAL — Stylesheet
+   Retro analog signal aesthetic
+   ============================================ */
+
+/* --- Reset & Base --- */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0a0a0a;
+  font-family: 'Segoe UI', 'Arial', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* --- Stage (particle container) --- */
+#stage {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* --- Floating text particles --- */
+.particle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-size: clamp(2rem, 5vw, 4.5rem);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  will-change: transform;
+  transition: text-shadow 0.3s ease;
+  /* Default glow — overridden per-color by JS */
+  text-shadow:
+    0 0 8px currentColor,
+    0 0 20px currentColor,
+    0 0 40px rgba(255, 255, 255, 0.15);
+}
+
+/* Assembled state enhancement */
+.particle.assembled {
+  text-shadow:
+    0 0 10px currentColor,
+    0 0 30px currentColor,
+    0 0 60px currentColor,
+    0 0 100px rgba(255, 255, 255, 0.08);
+}
+
+/* Glitch pulse — applied briefly via JS */
+.particle.glitch {
+  animation: glitchPulse 0.15s steps(2) 1;
+}
+
+@keyframes glitchPulse {
+  0% {
+    text-shadow:
+      -3px 0 #ff0040,
+      3px 0 #00ffea,
+      0 0 20px currentColor;
+    transform: translate(var(--x), var(--y)) skewX(-2deg);
+  }
+  50% {
+    text-shadow:
+      4px 0 #ff0040,
+      -4px 0 #00ffea,
+      0 0 20px currentColor;
+    transform: translate(var(--x), var(--y)) skewX(3deg);
+  }
+  100% {
+    text-shadow:
+      0 0 8px currentColor,
+      0 0 20px currentColor;
+    transform: translate(var(--x), var(--y)) skewX(0deg);
+  }
+}
+
+/* --- CRT Overlay Container --- */
+.crt-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+}
+
+/* --- Scanlines --- */
+.scanlines {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 2px,
+    rgba(0, 0, 0, 0.12) 2px,
+    rgba(0, 0, 0, 0.12) 4px
+  );
+  animation: scanlineScroll 8s linear infinite;
+}
+
+@keyframes scanlineScroll {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(4px); }
+}
+
+/* --- Noise overlay (CSS animated) --- */
+.noise {
+  position: absolute;
+  inset: -50%;
+  width: 200%;
+  height: 200%;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  background-size: 256px 256px;
+  opacity: 0.5;
+  animation: noiseShift 0.3s steps(3) infinite;
+}
+
+@keyframes noiseShift {
+  0% { transform: translate(0, 0); }
+  33% { transform: translate(-80px, -40px); }
+  66% { transform: translate(60px, 30px); }
+  100% { transform: translate(-30px, 70px); }
+}
+
+/* --- Vignette --- */
+.vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 50%,
+    rgba(0, 0, 0, 0.5) 80%,
+    rgba(0, 0, 0, 0.85) 100%
+  );
+}
+
+/* --- Status Label --- */
+.status-label {
+  position: fixed;
+  bottom: 2rem;
+  left: 2rem;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  opacity: 0;
+  transition: opacity 1.5s ease;
+  pointer-events: none;
+}
+
+.status-label.visible {
+  opacity: 1;
+}
+
+.status-text {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.35);
+  font-family: 'Courier New', monospace;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ff3333;
+  animation: dotBlink 2s ease-in-out infinite;
+  box-shadow: 0 0 6px #ff3333;
+}
+
+@keyframes dotBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+/* --- Grain canvas --- */
+#grain {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.06;
+  mix-blend-mode: screen;
+}
+
+/* --- Screen flicker (applied to body periodically via JS) --- */
+body.flicker {
+  animation: screenFlicker 0.08s steps(2) 1;
+}
+
+@keyframes screenFlicker {
+  0% { filter: brightness(1); }
+  25% { filter: brightness(0.7); }
+  50% { filter: brightness(1.1); }
+  75% { filter: brightness(0.85); }
+  100% { filter: brightness(1); }
+}
+
+/* --- Horizontal interference bar (applied via JS) --- */
+.interference-bar {
+  position: fixed;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  z-index: 45;
+  pointer-events: none;
+  animation: interferenceMove 0.6s linear forwards;
+}
+
+@keyframes interferenceMove {
+  0% { top: -3px; opacity: 1; }
+  100% { top: 100vh; opacity: 0; }
+}
+
+/* --- Assembled title spacing --- */
+.particle.word-nguyen { /* leftmost */ }
+.particle.word-ho { }
+.particle.word-quang { }
+.particle.word-khai { /* rightmost */ }
+
+/* --- Responsive tweaks --- */
+@media (max-width: 600px) {
+  .particle {
+    font-size: clamp(1.4rem, 7vw, 2.5rem);
+  }
+  .status-label {
+    bottom: 1rem;
+    left: 1rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .particle {
+    font-size: clamp(1.1rem, 8vw, 2rem);
+  }
+}
+
+/* --- Tracking status variant --- */
+.status-label[data-state="tracking"] .status-text::after {
+  content: '';
+  animation: ellipsis 1.5s steps(3) infinite;
+}
+
+@keyframes ellipsis {
+  0% { content: ''; }
+  33% { content: '.'; }
+  66% { content: '..'; }
+  100% { content: '...'; }
+}
