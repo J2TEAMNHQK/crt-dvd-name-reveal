@@ -39,7 +39,7 @@ Name fragments float independently across a dark screen with DVD-style bouncing 
 │  Full name holds centered with enhanced glow                │
 │  ↓                                                          │
 │  DISPERSE (1.4s)                                            │
-│  Words scatter to different quadrants organically            │
+│  Words scatter to different quadrants organically           │
 │  ↓                                                          │
 │  (repeat forever)                                           │
 └─────────────────────────────────────────────────────────────┘
